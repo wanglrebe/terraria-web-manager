@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terraria 服务器管理器</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Terraria 服务器管理器</h1>
+    </header>
+    
+    <nav class="main-nav">
+      <ul class="tabs">
+        <li><a href="#dashboard" class="tab-link active" data-tab="dashboard">控制面板</a></li>
+        <li><a href="#config" class="tab-link" data-tab="config">配置设置</a></li>
+        <li><a href="#users" class="tab-link" data-tab="users">用户管理</a></li>
+        <li><a href="#scheduler" class="tab-link" data-tab="scheduler">计划任务</a></li>
+        <li><a href="#logs" class="tab-link" data-tab="logs">服务器日志</a></li>
+      </ul>
+    </nav>
+    
+    <main>
+      <!-- 控制面板标签页 -->
+      <section id="dashboard" class="tab-content active">
+        <div class="panel">
+          <h2>服务器控制</h2>
+          
+          <div class="control-buttons">
+            <button id="startServer" class="btn btn-success">启动服务器</button>
+            <button id="stopServer" class="btn btn-danger" disabled>停止服务器</button>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <h2>服务器信息</h2>
+          <div class="status-panel">
+            <div class="status-item">
+              <span class="status-label">状态:</span>
+              <span id="serverStatus" class="status-value">未运行</span>
+            </div>
+            <div class="status-item">
+              <span class="status-label">当前选择:</span>
+              <span id="currentSelection" class="status-value">-</span>
+            </div>
+          </div>
+          
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">当前地图:</span>
+              <span id="currentWorld" class="info-value">未指定</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">在线玩家:</span>
+              <span id="playerCount" class="info-value">0</span>
+            </div>
+            <div class="info-item clickable" id="modsInfo">
+              <span class="info-label">启用模组:</span>
+              <span id="modsList" class="info-value">未加载</span>
+            </div>
+            <div class="info-item clickable" id="versionInfo">
+              <span class="info-label">版本信息:</span>
+              <span id="serverVersion" class="info-value">未知</span>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 配置设置标签页 -->
+      <section id="config" class="tab-content">
+        <div class="panel">
+          <h2>启动选项</h2>
+          <div class="server-options">
+            <div class="form-group">
+              <label for="steamOption">Steam 选项:</label>
+              <select id="steamOption" class="form-control">
+                <option value="nosteam">不使用 Steam</option>
+                <option value="steam">使用 Steam</option>
+              </select>
+            </div>
+            
+            <div id="lobbyOptions" class="form-group" style="display: none;">
+              <label for="lobbyType">大厅类型:</label>
+              <select id="lobbyType" class="form-control">
+                <option value="private">私人 (Private)</option>
+                <option value="friends">好友 (Friends)</option>
+                <option value="friendsOfFriends">好友的好友 (Friends of Friends)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <h2>服务器路径</h2>
+          <div class="form-group">
+            <label for="serverBasePath">服务器基础路径:</label>
+            <input type="text" id="serverBasePath" class="form-control" placeholder="例如：/home/wangxinyi/.steam/steam/steamapps/common/tModLoader/" value="/home/wangxinyi/.steam/steam/steamapps/common/tModLoader/">
+          </div>
+          <div class="server-paths">
+            <div class="form-group">
+              <label for="serverShPath">启动脚本(.sh)文件名:</label>
+              <input type="text" id="serverShPath" class="form-control" value="start-tModLoaderServer.sh">
+            </div>
+            <div class="form-group">
+              <label for="serverConfigPath">配置文件名:</label>
+              <input type="text" id="serverConfigPath" class="form-control" value="serverconfig.txt">
+            </div>
+          </div>
+          <div class="path-actions">
+            <button id="savePathConfig" class="btn btn-primary">保存路径设置</button>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <h2>服务器配置</h2>
+          
+          <div class="config-tabs">
+            <button id="basicConfigTab" class="tab-btn active">基本设置</button>
+            <button id="advancedConfigTab" class="tab-btn">高级设置</button>
+          </div>
+          
+          <div id="basicConfigPanel" class="config-panel">
+            <div class="form-group">
+              <label for="worldFile">世界文件:</label>
+              <div class="input-with-button">
+                <input type="text" id="worldFile" class="form-control" placeholder="选择现有世界文件路径">
+                <button id="browseWorldBtn" class="btn btn-secondary">浏览</button>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="maxPlayers">最大玩家数:</label>
+              <input type="number" id="maxPlayers" class="form-control" min="1" max="255" value="8">
+            </div>
+            
+            <div class="form-group">
+              <label for="serverPort">服务器端口:</label>
+              <input type="number" id="serverPort" class="form-control" min="1" max="65535" value="7777">
+            </div>
+            
+            <div class="form-group">
+              <label for="serverPassword">服务器密码:</label>
+              <input type="text" id="serverPassword" class="form-control" placeholder="留空表示无密码">
+            </div>
+            
+            <div class="form-group">
+              <label for="modpack">模组包:</label>
+              <input type="text" id="modpack" class="form-control" placeholder="留空表示加载所有模组">
+            </div>
+            
+            <div class="form-group">
+              <label for="motd">欢迎消息 (MOTD):</label>
+              <input type="text" id="motd" class="form-control" placeholder="服务器启动时显示的消息">
+            </div>
+            
+            <div class="form-group">
+              <label for="language">服务器语言:</label>
+              <select id="language" class="form-control">
+                <option value="en-US">英语 (English)</option>
+                <option value="zh-Hans" selected>中文 (Chinese)</option>
+                <option value="ru-RU">俄语 (Russian)</option>
+                <option value="de-DE">德语 (German)</option>
+                <option value="fr-FR">法语 (French)</option>
+                <option value="es-ES">西班牙语 (Spanish)</option>
+                <option value="it-IT">意大利语 (Italian)</option>
+                <option value="pt-BR">葡萄牙语 (Portuguese)</option>
+                <option value="pl-PL">波兰语 (Polish)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div id="advancedConfigPanel" class="config-panel" style="display: none;">
+            <div class="form-group">
+              <label for="configFileContent">完整配置文件内容:</label>
+              <textarea id="configFileContent" class="form-control code-editor" rows="20"></textarea>
+            </div>
+          </div>
+          
+          <div class="config-actions">
+            <button id="loadConfig" class="btn btn-secondary">加载配置</button>
+            <button id="saveConfig" class="btn btn-primary">保存配置</button>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 服务器日志标签页 -->
+      <section id="logs" class="tab-content">
+        <div class="panel">
+          <h2>服务器日志</h2>
+          <div class="log-controls">
+            <div class="log-filter">
+              <label for="logFilter">过滤日志:</label>
+              <input type="text" id="logFilter" class="form-control" placeholder="输入关键词过滤日志">
+            </div>
+            <div class="log-buttons">
+              <button id="clearLogs" class="btn btn-secondary">清除日志</button>
+              <button id="exportLogs" class="btn btn-secondary">导出日志</button>
+            </div>
+          </div>
+          <div id="logContainer" class="logs-container"></div>
+        </div>
+      </section>
+      
+      <!-- 用户管理标签页 -->
+      <section id="users" class="tab-content">
+        <div class="panel">
+          <h2>在线用户管理</h2>
+          <div class="user-controls">
+            <div class="user-refresh">
+              <button id="refreshUsers" class="btn btn-secondary">刷新用户列表</button>
+            </div>
+            <div class="user-filter">
+              <input type="text" id="userFilter" class="form-control" placeholder="搜索用户...">
+            </div>
+          </div>
+          
+          <div class="users-container">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>用户名</th>
+                  <th>聊天命令权限</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="usersList">
+                <!-- 用户列表将在这里动态生成 -->
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="no-users-message" id="noUsersMessage">
+            <p>目前没有在线用户</p>
+          </div>
+          
+          <div class="command-panel">
+            <h3>自定义命令</h3>
+            <div class="command-input">
+              <input type="text" id="customCommand" class="form-control" placeholder="输入用户名">
+              <div class="command-buttons">
+                <button id="kickUser" class="btn btn-warning">踢出用户</button>
+                <button id="banUser" class="btn btn-danger">封禁用户</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      <!-- 添加到main标签内，作为新的标签页内容 -->
+      <section id="scheduler" class="tab-content">
+        <div class="panel">
+          <h2>自动保存设置</h2>
+          <div class="form-group">
+            <label for="autoSaveEnabled">启用自动保存:</label>
+            <div class="switch-container">
+              <label class="switch">
+                <input type="checkbox" id="autoSaveEnabled">
+                <span class="slider"></span>
+              </label>
+              <span id="autoSaveStatus" class="status-disabled">已禁用</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="autoSaveInterval">保存间隔时间(分钟):</label>
+            <select id="autoSaveInterval" class="form-control">
+              <option value="5">5分钟</option>
+              <option value="10">10分钟</option>
+              <option value="15" selected>15分钟</option>
+              <option value="30">30分钟</option>
+              <option value="60">1小时</option>
+              <option value="120">2小时</option>
+            </select>
+          </div>
+          
+          <div class="schedule-info">
+            <p>下次保存时间: <span id="nextSaveTime">未计划</span></p>
+            <p>上次保存时间: <span id="lastSaveTime">从未</span></p>
+          </div>
+          
+          <div class="form-actions">
+            <button id="saveNow" class="btn btn-primary" disabled>立即保存</button>
+          </div>
+        </div>
+        
+        <div class="panel">
+          <h2>自动重启设置</h2>
+          <div class="form-group">
+            <label for="autoRestartEnabled">启用自动重启:</label>
+            <div class="switch-container">
+              <label class="switch">
+                <input type="checkbox" id="autoRestartEnabled">
+                <span class="slider"></span>
+              </label>
+              <span id="autoRestartStatus" class="status-disabled">已禁用</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="restartTime">计划重启时间:</label>
+            <input type="time" id="restartTime" class="form-control" value="04:00">
+          </div>
+          
+          <div class="form-group">
+            <label for="restartWarningTime">提前警告时间(分钟):</label>
+            <select id="restartWarningTime" class="form-control">
+              <option value="1">1分钟</option>
+              <option value="3">3分钟</option>
+              <option value="5" selected>5分钟</option>
+              <option value="10">10分钟</option>
+              <option value="15">15分钟</option>
+              <option value="30">30分钟</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="bypassPlayersCheck">玩家在线时重启:</label>
+            <div class="switch-container">
+              <label class="switch">
+                <input type="checkbox" id="bypassPlayersCheck">
+                <span class="slider"></span>
+              </label>
+              <span id="bypassPlayersStatus" class="status-disabled">不重启</span>
+            </div>
+            <p class="option-description">启用后，即使有玩家在线也会执行重启</p>
+          </div>
+          
+          <div class="schedule-info">
+            <p>下次重启时间: <span id="nextRestartTime">未计划</span></p>
+            <p>上次重启时间: <span id="lastRestartTime">从未</span></p>
+          </div>
+          
+          <div class="form-actions">
+            <button id="restartNow" class="btn btn-danger" disabled>立即重启</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <footer>
+      <p>Terraria 服务器管理器 &copy; 2025</p>
+    </footer>
+  </div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
