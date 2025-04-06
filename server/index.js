@@ -5,6 +5,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+const githubStatusUpdater = require('./github-status-updater.js');
 
 // 创建Express应用
 const app = express();
@@ -119,10 +120,16 @@ app.post('/api/server/start', (req, res) => {
     console.log(`服务器进程退出，代码: ${code}`);
     terrariaProcess = null;
     io.emit('server-status', { running: false, exitCode: code });
+    
+    // 更新GitHub状态 - 服务器已关闭
+    githubStatusUpdater.handleServerStatusChange(false);
   });
 
   res.json({ message: '服务器启动中' });
   io.emit('server-status', { running: true });
+  
+  // 更新GitHub状态 - 服务器已启动
+  githubStatusUpdater.handleServerStatusChange(true);
 });
 
 // API路由 - 停止服务器
@@ -144,6 +151,9 @@ app.post('/api/server/stop', (req, res) => {
       terrariaProcess.kill();
       terrariaProcess = null;
       io.emit('server-status', { running: false, exitCode: -1 });
+      
+      // 更新GitHub状态 - 服务器已强制关闭
+      githubStatusUpdater.handleServerStatusChange(false);
     }
   }, 5000);
 
@@ -303,6 +313,29 @@ app.post('/api/server/command', (req, res) => {
   }
 });
 
+// API路由 - 测试GitHub配置
+app.get('/api/github/test', async (req, res) => {
+  try {
+    const configLoaded = await githubStatusUpdater.loadConfig();
+    if (!configLoaded) {
+      return res.json({ 
+        success: false, 
+        message: '无法加载GitHub配置文件，请确保配置文件存在并包含有效的令牌' 
+      });
+    }
+    
+    const testResult = await githubStatusUpdater.testGitHubConfig();
+    if (testResult) {
+      return res.json({ success: true, message: 'GitHub配置有效' });
+    } else {
+      return res.json({ success: false, message: 'GitHub配置无效，请检查令牌权限' });
+    }
+  } catch (error) {
+    console.error('测试GitHub配置失败:', error);
+    res.status(500).json({ success: false, message: `测试失败: ${error.message}` });
+  }
+});
+
 // Socket.IO连接处理
 io.on('connection', (socket) => {
   console.log('客户端已连接');
@@ -340,6 +373,14 @@ loadPathConfig();
 
 // 启动服务器
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`服务器运行在端口 ${PORT}`);
+  
+  // 初始化GitHub状态更新器
+  try {
+    await githubStatusUpdater.initStatusUpdater(terrariaProcess !== null);
+    console.log('GitHub状态更新器初始化完成');
+  } catch (error) {
+    console.error('GitHub状态更新器初始化失败:', error);
+  }
 });
