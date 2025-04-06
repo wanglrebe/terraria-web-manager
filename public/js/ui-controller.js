@@ -85,13 +85,16 @@ function updateModsDisplay(modsList) {
     return;
   }
   
+  // 过滤空字符串和空白模组名
+  const filteredModsList = modsList.filter(mod => mod && mod.trim() !== '');
+  
   // 清空当前内容
   modsListElement.innerHTML = '';
   
   // 添加模组数量
   const modCount = document.createElement('span');
   modCount.className = 'mod-count';
-  modCount.textContent = `${modsList.length} 个模组`;
+  modCount.textContent = `${filteredModsList.length} 个模组`;
   modsListElement.appendChild(modCount);
   
   // 创建模组列表元素
@@ -99,8 +102,8 @@ function updateModsDisplay(modsList) {
   modListElement.className = 'mod-list';
   
   // 添加每个模组
-  modsList.forEach(mod => {
-    const modItem = document.createElement('span');
+  filteredModsList.forEach(mod => {
+    const modItem = document.createElement('div'); // 使用div而不是span以便每个模组占一行
     modItem.className = 'mod-item';
     modItem.textContent = mod;
     modListElement.appendChild(modItem);

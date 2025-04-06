@@ -227,13 +227,17 @@ function handleServerStatusChange(status) {
   updateServerStatus(status.running);
   
   if (status.running) {
-    // 从配置文件获取世界信息并更新
-    loadConfigFile().then(() => {
-      // 更新当前地图名称
-      updateWorldName();
-    }).catch(err => {
-      console.error('加载配置文件失败:', err);
-    });
+    // 保持当前世界名称，仅当名称为空或"未指定"时才从配置文件更新
+    const currentWorld = document.getElementById('currentWorld');
+    if (!currentWorld || currentWorld.textContent === '未指定' || currentWorld.textContent === '') {
+      // 从配置文件获取世界信息并更新
+      loadConfigFile().then(() => {
+        // 更新当前地图名称
+        updateCurrentWorldName(); // 使用config-manager.js中的函数直接从配置提取世界名
+      }).catch(err => {
+        console.error('加载配置文件失败:', err);
+      });
+    }
     
     // 服务器启动后，延迟获取版本信息
     setTimeout(() => {

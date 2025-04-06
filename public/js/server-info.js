@@ -48,19 +48,67 @@ function processModListOutput(content) {
   
   // 处理以": "开头的行，这通常是模组名
   if (content.startsWith(': ')) {
-    // 去掉开头的": "并分割多个模组名
+    // 去掉开头的": "
     const line = content.substring(2).trim();
-    const modNames = line.split(/\s+(?=[A-Z])/);
     
-    console.log('分割后的模组名:', modNames);
+    // 为了避免与服务器版本等信息混淆，检查是否包含特定的关键词
+    if (line.includes('泰拉瑞亚服务器') || 
+        line.includes('个玩家已连接') || 
+        line.includes('tModLoader') ||
+        line.includes('服务器版本')) {
+      console.log('忽略非模组信息:', line);
+      return;
+    }
     
-    modNames.forEach(modName => {
-      const trimmedName = modName.trim();
-      if (trimmedName && !activeModsList.includes(trimmedName)) {
-        activeModsList.push(trimmedName);
+    // 首先尝试按回车分割可能的多行模组列表
+    let modCandidates = [];
+    if (line.includes('\n')) {
+      modCandidates = line.split(/[\n\r]+/).map(s => s.trim()).filter(s => s);
+      console.log('按回车符分割候选模组:', modCandidates);
+    } else {
+      // 否则，尝试保留完整的模组名（通常包含空格），如"Calamity Mod Music"
+      // 使用正则表达式识别模组名模式
+      const regex = /([A-Z][a-z0-9]+(?:\s+[A-Za-z][a-z0-9]+)*)/g;
+      let match;
+      while ((match = regex.exec(line)) !== null) {
+        let fullModName = match[0];
+        // 确保是完整模组名（如果后面紧接着空格和大写字母开头的词，不截断）
+        let startPos = match.index + match[0].length;
+        if (startPos < line.length && line[startPos] === ' ' && 
+            startPos + 1 < line.length && /[A-Z]/.test(line[startPos + 1])) {
+          // 寻找这个模组名的实际结束位置（通常是下一个大写字母开头前的空格）
+          let nextCapital = line.substring(startPos + 1).search(/\s[A-Z]/);
+          if (nextCapital !== -1) {
+            fullModName = line.substring(match.index, startPos + 1 + nextCapital);
+          }
+        }
+        modCandidates.push(fullModName.trim());
       }
-    });
+      console.log('按正则表达式分割候选模组:', modCandidates);
+    }
     
+    // 排除常见的非模组关键词
+    const nonModKeywords = ['Server', 'Type', 'Command', 'Help', 'List', 'Exit', 'Save', 'Player', 'World'];
+    
+    // 过滤并添加有效的模组名
+    for (const modName of modCandidates) {
+      // 排除太短的和非模组关键词
+      const isNonModKeyword = nonModKeywords.some(keyword => 
+        modName === keyword || modName === keyword.toLowerCase()
+      );
+      
+      if (modName.length > 2 && !isNonModKeyword && !activeModsList.includes(modName)) {
+        activeModsList.push(modName);
+        console.log('添加模组:', modName);
+      } else if (isNonModKeyword) {
+        console.log('忽略非模组关键词:', modName);
+      } else {
+        console.log('忽略过短名称:', modName);
+      }
+    }
+    
+    // 更新模组显示
+    console.log('当前模组列表:', activeModsList);
     updateModsDisplay(activeModsList);
   }
 }

@@ -303,6 +303,26 @@ h1, h2 {
   font-weight: 500;
 }
 
+/* 模组列表样式 */
+.mod-count {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.mod-list {
+  max-height: 150px;
+  overflow-y: auto;
+  border-top: 1px solid #dee2e6;
+  padding-top: 5px;
+}
+
+.mod-item {
+  display: block;
+  margin-bottom: 3px;
+  padding: 2px 0;
+}
+
 /* 配置标签 */
 .config-tabs {
   display: flex;
