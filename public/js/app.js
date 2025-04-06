@@ -5,6 +5,7 @@ import { setupConfigManager } from './config-manager.js';
 import { setupLogsManager } from './logs-manager.js';
 import { setupUsersManager } from './users-manager.js';
 import { setupScheduler } from './scheduler.js';
+import { setupGithubManager } from './github-manager.js'; // 新添加的导入
 import { socket } from './socket-client.js';
 import { fetchModsList, fetchVersionInfo } from './server-info.js';
 
@@ -20,6 +21,8 @@ function initApp() {
   setupLogsManager();
   setupUsersManager();
   setupScheduler();
+  setupGithubManager(); // 新添加的初始化
+
   
   // 设置信息点击事件
   setupInfoClickEvents();

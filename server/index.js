@@ -336,6 +336,98 @@ app.get('/api/github/test', async (req, res) => {
   }
 });
 
+// 修改 index.js
+// 位置：在API路由部分，添加GitHub状态更新相关的API路由
+// 在其他API路由定义之后添加
+
+// API路由 - 获取GitHub配置
+app.get('/api/github/config', async (req, res) => {
+  try {
+    await githubStatusUpdater.loadConfig();
+    const config = githubStatusUpdater.getConfig();
+    
+    // 不返回敏感信息如token
+    const safeConfig = {
+      owner: config.owner,
+      repo: config.repo,
+      issueNumber: config.issueNumber,
+      minUpdateInterval: config.minUpdateInterval,
+      regularUpdateInterval: config.regularUpdateInterval,
+      maxHistoryItems: config.maxHistoryItems,
+      enableUpdates: config.enableUpdates,
+      updateOnPlayerChange: config.updateOnPlayerChange,
+      updateOnModsLoaded: config.updateOnModsLoaded,
+      updateOnVersionLoaded: config.updateOnVersionLoaded,
+      updateOnWorldChange: config.updateOnWorldChange
+    };
+    
+    res.json({ success: true, config: safeConfig });
+  } catch (error) {
+    console.error('获取GitHub配置失败:', error);
+    res.status(500).json({ success: false, message: `获取配置失败: ${error.message}` });
+  }
+});
+
+// API路由 - 保存GitHub配置
+app.post('/api/github/config', async (req, res) => {
+  try {
+    const newConfig = req.body;
+    
+    // 验证必要字段
+    if (!newConfig) {
+      return res.status(400).json({ success: false, message: '缺少配置数据' });
+    }
+    
+    // 更新配置
+    githubStatusUpdater.updateConfig(newConfig);
+    
+    // 保存配置
+    const saved = await githubStatusUpdater.saveConfig();
+    if (!saved) {
+      return res.status(500).json({ success: false, message: '保存配置失败' });
+    }
+    
+    res.json({ success: true, message: '配置保存成功' });
+  } catch (error) {
+    console.error('保存GitHub配置失败:', error);
+    res.status(500).json({ success: false, message: `保存配置失败: ${error.message}` });
+  }
+});
+
+// API路由 - 强制更新GitHub Issue
+app.post('/api/github/update', async (req, res) => {
+  try {
+    // 从请求体获取当前服务器状态
+    const currentState = req.body || {};
+    console.log('收到GitHub更新请求，状态数据:', currentState);
+    
+    // 使用提供的数据更新 GitHub 状态
+    if (currentState.worldName && currentState.worldName !== '未知' && currentState.worldName !== '未指定') {
+      githubStatusUpdater.updateWorldInfo(currentState.worldName);
+    }
+    
+    if (currentState.playerCount !== undefined) {
+      githubStatusUpdater.updatePlayerCount(currentState.playerCount);
+    }
+    
+    if (currentState.modCount !== undefined) {
+      githubStatusUpdater.updateModCount(currentState.modCount);
+    }
+    
+    if (currentState.serverVersion && currentState.serverVersion !== '未知') {
+      githubStatusUpdater.updateVersionInfo(currentState.serverVersion);
+    }
+    
+    // 强制更新 GitHub Issue
+    await githubStatusUpdater.forceUpdate();
+    
+    res.json({ success: true, message: '已触发GitHub Issue更新' });
+  } catch (error) {
+    console.error('强制更新GitHub Issue失败:', error);
+    res.status(500).json({ success: false, message: `更新失败: ${error.message}` });
+  }
+});
+
 // Socket.IO连接处理
 io.on('connection', (socket) => {
   console.log('客户端已连接');

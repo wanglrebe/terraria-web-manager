@@ -1,9 +1,11 @@
-// github-status-updater.js - 将服务器状态同步到GitHub Issue
+// 修改 github-status-updater.js
+// 在配置部分添加更新控制选项
+// 位置：在默认配置对象中添加新的选项
+
 const fetch = require('node-fetch');
 const fs = require('fs');
-const path = require('path');
+const path = require('path');  // 添加这一行导入 path 模块
 
-// 默认配置
 let config = {
   // GitHub配置
   owner: 'wanglrebe',               // 你的GitHub用户名
@@ -16,32 +18,20 @@ let config = {
   regularUpdateInterval: 15 * 60 * 1000, // 定期更新间隔 (15分钟)
   maxHistoryItems: 50,             // 历史记录最大保存条数
   
+  // 更新触发配置
+  enableUpdates: true,             // 是否启用GitHub更新
+  updateOnPlayerChange: true,      // 玩家变动时更新
+  updateOnModsLoaded: true,        // 模组加载完成时更新
+  updateOnVersionLoaded: true,     // 版本信息加载时更新
+  updateOnWorldChange: true,       // 世界信息变更时更新
+  
   // 配置文件路径
   configPath: '/home/wangxinyi/Documents/github-status-updater.js' // 相对于项目根目录的配置文件路径
 };
 
-// 上次更新时间
-let lastUpdateTime = 0;
-// 维护一个历史记录数组
-let statusHistory = [];
-// 服务器启动时间
-let serverStartTime = null;
-// 定时更新的timer引用
-let updateTimer = null;
-// 当前服务器状态
-let currentStatus = {
-  running: false,
-  playerCount: 0,
-  worldName: '未知',
-  modCount: 0,
-  serverVersion: '未知',
-  lastUpdate: new Date().toISOString(),
-};
+// 修改 loadConfig 函数，加载新增的配置项
+// 位置：在 loadConfig 函数中添加新配置项的加载
 
-/**
- * 从外部配置文件加载GitHub配置
- * @returns {Promise<boolean>} 是否成功加载配置
- */
 async function loadConfig() {
   try {
     // 使用绝对路径,确保即使工作目录变化也能找到配置文件
@@ -93,6 +83,13 @@ async function loadConfig() {
     if (userConfig.regularUpdateInterval) config.regularUpdateInterval = userConfig.regularUpdateInterval;
     if (userConfig.maxHistoryItems) config.maxHistoryItems = userConfig.maxHistoryItems;
     
+    // 新增：加载更新触发配置
+    if (userConfig.enableUpdates !== undefined) config.enableUpdates = userConfig.enableUpdates;
+    if (userConfig.updateOnPlayerChange !== undefined) config.updateOnPlayerChange = userConfig.updateOnPlayerChange;
+    if (userConfig.updateOnModsLoaded !== undefined) config.updateOnModsLoaded = userConfig.updateOnModsLoaded;
+    if (userConfig.updateOnVersionLoaded !== undefined) config.updateOnVersionLoaded = userConfig.updateOnVersionLoaded;
+    if (userConfig.updateOnWorldChange !== undefined) config.updateOnWorldChange = userConfig.updateOnWorldChange;
+    
     console.log('GitHub配置已加载');
     
     return true;
@@ -101,6 +98,29 @@ async function loadConfig() {
     return false;
   }
 }
+
+// 位置: 在 github-status-updater.js 文件中，找到变量声明部分
+// 确保 currentStatus 在全局作用域内定义，并在使用前已初始化
+
+// 修改后的代码部分：
+
+// 上次更新时间
+let lastUpdateTime = 0;
+// 维护一个历史记录数组
+let statusHistory = [];
+// 服务器启动时间
+let serverStartTime = null;
+// 定时更新的timer引用
+let updateTimer = null;
+// 当前服务器状态 - 确保这个声明在文件的全局作用域内
+let currentStatus = {
+  running: false,
+  playerCount: 0,
+  worldName: '未知',
+  modCount: 0,
+  serverVersion: '未知',
+  lastUpdate: new Date().toISOString(),
+};
 
 /**
  * 初始化GitHub状态更新器
@@ -159,6 +179,12 @@ function scheduleRegularUpdates() {
  * @param {boolean} force - 是否强制更新,忽略时间间隔限制
  */
 async function updateServerStatus(reason = '状态变更', force = false) {
+  // 检查是否启用了GitHub更新
+  if (!config.enableUpdates) {
+    console.log(`GitHub更新已禁用，跳过更新。原因: ${reason}`);
+    return;
+  }
+  
   // 如果没有配置Token，跳过更新
   if (!config.token) {
     console.warn('缺少GitHub令牌,跳过状态更新');
@@ -378,7 +404,11 @@ function handleServerStatusChange(running) {
 function updateWorldInfo(worldName) {
   if (worldName && worldName !== currentStatus.worldName) {
     currentStatus.worldName = worldName;
-    updateServerStatus('地图更改');
+    
+    // 检查是否需要更新GitHub
+    if (config.updateOnWorldChange) {
+      updateServerStatus('地图更改');
+    }
   }
 }
 
@@ -395,7 +425,8 @@ function updatePlayerCount(count) {
     
     currentStatus.playerCount = count;
     
-    if (significant) {
+    // 检查是否需要更新GitHub
+    if (config.updateOnPlayerChange && significant) {
       updateServerStatus('玩家数量变化');
     }
   }
@@ -408,7 +439,11 @@ function updatePlayerCount(count) {
 function updateModCount(count) {
   if (count !== currentStatus.modCount) {
     currentStatus.modCount = count;
-    updateServerStatus('模组数量变化');
+    
+    // 检查是否需要更新GitHub
+    if (config.updateOnModsLoaded) {
+      updateServerStatus('模组数量变化');
+    }
   }
 }
 
@@ -419,8 +454,57 @@ function updateModCount(count) {
 function updateVersionInfo(versionInfo) {
   if (versionInfo && versionInfo !== currentStatus.serverVersion) {
     currentStatus.serverVersion = versionInfo;
-    updateServerStatus('版本信息更新');
+    
+    // 检查是否需要更新GitHub
+    if (config.updateOnVersionLoaded) {
+      updateServerStatus('版本信息更新');
+    }
   }
+}
+
+async function saveConfig() {
+  try {
+    const configFilePath = path.resolve(__dirname, config.configPath);
+    
+    // 准备要保存的配置对象
+    const configToSave = {
+      token: config.token,
+      owner: config.owner,
+      repo: config.repo,
+      issueNumber: config.issueNumber,
+      minUpdateInterval: config.minUpdateInterval,
+      regularUpdateInterval: config.regularUpdateInterval,
+      maxHistoryItems: config.maxHistoryItems,
+      enableUpdates: config.enableUpdates,
+      updateOnPlayerChange: config.updateOnPlayerChange,
+      updateOnModsLoaded: config.updateOnModsLoaded,
+      updateOnVersionLoaded: config.updateOnVersionLoaded,
+      updateOnWorldChange: config.updateOnWorldChange
+    };
+    
+    // 确保目录存在
+    const configDir = path.dirname(configFilePath);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    // 写入配置文件
+    fs.writeFileSync(
+      configFilePath,
+      JSON.stringify(configToSave, null, 2),
+      'utf8'
+    );
+    
+    console.log(`GitHub配置已保存到: ${configFilePath}`);
+    return true;
+  } catch (error) {
+    console.error('保存GitHub配置失败:', error);
+    return false;
+  }
+}
+
+async function forceUpdate() {
+  return updateServerStatus('手动触发', true);
 }
 
 /**
@@ -467,5 +551,11 @@ module.exports = {
   updateModCount,
   updateVersionInfo,
   testGitHubConfig,
-  loadConfig
+  loadConfig,
+  saveConfig,                // 新增：保存配置
+  forceUpdate,               // 新增：强制更新
+  getConfig: () => config,   // 新增：获取当前配置
+  updateConfig: (newConfig) => {  // 新增：更新配置
+    config = { ...config, ...newConfig };
+  }
 };
