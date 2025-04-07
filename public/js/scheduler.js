@@ -271,6 +271,8 @@ function setupScheduler() {
   }
   
   // 重启服务器
+  // 在 scheduler.js 中修改 restartServer 函数
+
   function restartServer() {
     // 先检查是否要忽略玩家在线
     const bypassPlayers = bypassPlayersCheck && bypassPlayersCheck.checked;
@@ -280,6 +282,66 @@ function setupScheduler() {
     const lobbyType = document.getElementById('lobbyType');
     const steamSetting = steamOption ? steamOption.value : 'nosteam';
     const lobbySetting = (steamSetting === 'steam' && lobbyType) ? lobbyType.value : null;
+    
+    // 创建一个重启标记，防止多次触发启动
+    let restartInProgress = true;
+    
+    // 监听服务器停止事件
+    const serverStoppedHandler = function(event) {
+      if (!restartInProgress) return;
+      
+      // 确保只执行一次
+      restartInProgress = false;
+      // 移除监听器，防止内存泄漏
+      document.removeEventListener('serverStopped', serverStoppedHandler);
+      
+      console.log('检测到服务器已完全停止，开始启动新服务器');
+      addLogEntry('服务器已完全停止，开始启动新服务器');
+      
+      // 更新上次重启时间
+      if (lastRestartTime) {
+        lastRestartTime.textContent = new Date().toLocaleString();
+      }
+      
+      // 设置额外的延迟确保一切就绪
+      setTimeout(() => {
+        console.log('正在启动服务器...');
+        addLogEntry('正在启动服务器...');
+        
+        // 调用API启动服务器
+        fetch('/api/server/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            steam: steamSetting,
+            lobby: lobbySetting
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('服务器启动响应:', data);
+          addLogEntry('服务器重启流程已完成');
+        })
+        .catch(error => {
+          console.error('启动服务器失败:', error);
+          addLogEntry('重启流程中启动服务器失败: ' + error.message, true);
+        });
+      }, 5000); // 额外等待5秒以确保系统完全准备好
+    };
+    
+    // 添加监听器以便在服务器停止时接收通知
+    document.addEventListener('serverStopped', serverStoppedHandler);
+    
+    // 还需要设置一个超时机制，以防服务器关闭事件没有正确触发
+    const timeout = setTimeout(() => {
+      if (restartInProgress) {
+        console.log('服务器停止超时，强制继续重启流程');
+        addLogEntry('服务器停止超时，强制继续重启流程');
+        serverStoppedHandler(new Event('serverStopped'));
+      }
+    }, 30000); // 30秒超时
     
     // 先保存世界
     saveWorldCommand()
@@ -291,44 +353,15 @@ function setupScheduler() {
         return executeRawCommand(getExitCommand());
       })
       .then(() => {
-        console.log('服务器已停止，准备重启');
-        addLogEntry('服务器已停止，准备重启');
-        
-        // 更新上次重启时间
-        if (lastRestartTime) {
-          lastRestartTime.textContent = new Date().toLocaleString();
-        }
-        
-        // 设置短暂延迟后重启服务器
-        setTimeout(() => {
-          console.log('正在启动服务器...');
-          addLogEntry('正在启动服务器...');
-          
-          // 调用API启动服务器
-          fetch('/api/server/start', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              steam: steamSetting,
-              lobby: lobbySetting
-            })
-          })
-          .then(response => response.json())
-          .then(data => {
-            console.log('服务器启动响应:', data);
-            addLogEntry('服务器重启流程已完成');
-          })
-          .catch(error => {
-            console.error('启动服务器失败:', error);
-            addLogEntry('重启流程中启动服务器失败: ' + error.message, true);
-          });
-        }, 3000); // 等待3秒后启动，确保服务器完全关闭
+        console.log('服务器正在停止，等待完全关闭...');
+        addLogEntry('服务器正在停止，等待完全关闭...');
       })
       .catch(error => {
         console.error('重启服务器失败:', error);
         addLogEntry('重启服务器失败: ' + error.message, true);
+        restartInProgress = false;
+        clearTimeout(timeout);
+        document.removeEventListener('serverStopped', serverStoppedHandler);
       });
   }
   

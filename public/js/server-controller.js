@@ -261,6 +261,12 @@ function handleServerStatusChange(status) {
     
     if (status.exitCode !== undefined) {
       addLogEntry(`服务器已停止，退出代码: ${status.exitCode}`, status.exitCode !== 0);
+      
+      // 派发服务器已停止事件，供重启功能使用
+      const serverStoppedEvent = new CustomEvent('serverStopped', { 
+        detail: { exitCode: status.exitCode } 
+      });
+      document.dispatchEvent(serverStoppedEvent);
     }
   }
 }
