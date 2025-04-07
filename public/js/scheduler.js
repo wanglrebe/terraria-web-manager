@@ -2,6 +2,7 @@
 import { sendServerCommand } from './server-controller.js';
 import { addLogEntry } from './logs-manager.js';
 import { showConfirmDialog } from './ui-controller.js';
+import { saveExtendedConfig } from './server-controller.js';
 import { 
   saveWorld as saveWorldCommand, 
   broadcast, 
@@ -50,6 +51,9 @@ function setupScheduler() {
       
       // 更新UI状态
       updateAutoSaveUI(enabled);
+      
+      // 保存配置
+      saveSchedulerConfig();
     });
   }
   
@@ -61,6 +65,9 @@ function setupScheduler() {
         stopAutoSave();
         startAutoSave();
       }
+      
+      // 保存配置
+      saveSchedulerConfig();
     });
   }
   
@@ -86,6 +93,9 @@ function setupScheduler() {
       
       // 更新UI状态
       updateAutoRestartUI(enabled);
+      
+      // 保存配置
+      saveSchedulerConfig();
     });
   }
   
@@ -97,6 +107,17 @@ function setupScheduler() {
         stopAutoRestart();
         startAutoRestart();
       }
+      
+      // 保存配置
+      saveSchedulerConfig();
+    });
+  }
+  
+  // 警告时间变更事件
+  if (restartWarningTime) {
+    restartWarningTime.addEventListener('change', () => {
+      // 保存配置
+      saveSchedulerConfig();
     });
   }
   
@@ -107,6 +128,9 @@ function setupScheduler() {
         bypassPlayersStatus.textContent = bypassPlayersCheck.checked ? '会重启' : '不重启';
         bypassPlayersStatus.className = bypassPlayersCheck.checked ? 'status-enabled' : 'status-disabled';
       }
+      
+      // 保存配置
+      saveSchedulerConfig();
     });
   }
   
@@ -271,8 +295,6 @@ function setupScheduler() {
   }
   
   // 重启服务器
-  // 在 scheduler.js 中修改 restartServer 函数
-
   function restartServer() {
     // 先检查是否要忽略玩家在线
     const bypassPlayers = bypassPlayersCheck && bypassPlayersCheck.checked;
@@ -363,6 +385,33 @@ function setupScheduler() {
         clearTimeout(timeout);
         document.removeEventListener('serverStopped', serverStoppedHandler);
       });
+  }
+  
+  // 保存计划任务配置
+  function saveSchedulerConfig() {
+    const config = {
+      autoSave: {
+        enabled: autoSaveEnabled ? autoSaveEnabled.checked : false,
+        interval: autoSaveInterval ? parseInt(autoSaveInterval.value, 10) : 15
+      },
+      autoRestart: {
+        enabled: autoRestartEnabled ? autoRestartEnabled.checked : false,
+        time: restartTime ? restartTime.value : '04:00',
+        warningTime: restartWarningTime ? parseInt(restartWarningTime.value, 10) : 5,
+        bypassPlayers: bypassPlayersCheck ? bypassPlayersCheck.checked : false
+      }
+    };
+    
+    saveExtendedConfig({
+      autoSave: config.autoSave,
+      autoRestart: config.autoRestart
+    })
+    .then(() => {
+      console.log('计划任务配置已保存');
+    })
+    .catch(error => {
+      console.error('保存计划任务配置失败:', error);
+    });
   }
   
   console.log('计划任务功能已设置');

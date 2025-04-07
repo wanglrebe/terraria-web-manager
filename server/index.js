@@ -16,7 +16,28 @@ const io = new Server(server);
 let serverConfig = {
   basePath: '/home/wangxinyi/.steam/steam/steamapps/common/tModLoader/',
   shFileName: 'start-tModLoaderServer.sh',
-  configFileName: 'serverconfig.txt'
+  configFileName: 'serverconfig.txt',
+  // 新增扩展配置默认值
+  extendedConfig: {
+    // Steam选项
+    steamSettings: {
+      useSteam: false,
+      lobbyType: 'private'
+    },
+    // 自动保存设置
+    autoSave: {
+      enabled: false,
+      interval: 15 // 分钟
+    },
+    // 自动重启设置
+    autoRestart: {
+      enabled: false,
+      time: '04:00',
+      warningTime: 5, // 分钟
+      bypassPlayers: false
+    }
+    // 可以根据需要添加更多配置项
+  }
 };
 
 // 配置文件路径
@@ -201,28 +222,12 @@ app.post('/api/server/paths', (req, res) => {
     }
     
     // 更新配置
-    serverConfig = {
-      basePath,
-      shFileName,
-      configFileName
-    };
+    serverConfig.basePath = basePath;
+    serverConfig.shFileName = shFileName;
+    serverConfig.configFileName = configFileName;
     
-    // 可以选择将配置保存到文件中，以便重启后保留
-    try {
-      const configDir = path.join(__dirname, '../config');
-      if (!fs.existsSync(configDir)) {
-        fs.mkdirSync(configDir, { recursive: true });
-      }
-      
-      fs.writeFileSync(
-        path.join(configDir, 'server-paths.json'),
-        JSON.stringify(serverConfig, null, 2),
-        'utf8'
-      );
-    } catch (saveError) {
-      console.error('保存路径配置到文件失败:', saveError);
-      // 继续执行，不返回错误
-    }
+    // 保存配置到文件
+    saveServerConfig();
     
     res.json({ success: true, message: '服务器路径配置更新成功' });
   } catch (error) {
@@ -336,10 +341,6 @@ app.get('/api/github/test', async (req, res) => {
   }
 });
 
-// 修改 index.js
-// 位置：在API路由部分，添加GitHub状态更新相关的API路由
-// 在其他API路由定义之后添加
-
 // API路由 - 获取GitHub配置
 app.get('/api/github/config', async (req, res) => {
   try {
@@ -428,6 +429,40 @@ app.post('/api/github/update', async (req, res) => {
   }
 });
 
+// API路由 - 获取扩展配置
+app.get('/api/server/extended-config', (req, res) => {
+  res.json({
+    success: true,
+    config: serverConfig.extendedConfig
+  });
+});
+
+// API路由 - 保存扩展配置
+app.post('/api/server/extended-config', (req, res) => {
+  if (terrariaProcess) {
+    // 某些配置可能需要在服务器停止时才能修改
+    // 但为了灵活性，我们可以让客户端决定哪些配置项可以在运行时更改
+    console.log('服务器运行中，部分配置可能不会立即生效');
+  }
+  
+  const { config } = req.body;
+  
+  if (!config) {
+    return res.status(400).json({ success: false, message: '缺少配置数据' });
+  }
+  
+  // 更新配置
+  serverConfig.extendedConfig = {
+    ...serverConfig.extendedConfig,
+    ...config
+  };
+  
+  // 保存配置到文件
+  saveServerConfig();
+  
+  res.json({ success: true, message: '扩展配置保存成功' });
+});
+
 // Socket.IO连接处理
 io.on('connection', (socket) => {
   console.log('客户端已连接');
@@ -445,18 +480,53 @@ io.on('connection', (socket) => {
   });
 });
 
-// 加载保存的路径配置（如果存在）
+// 保存服务器配置到文件
+function saveServerConfig() {
+  try {
+    const configDir = path.join(__dirname, '../config');
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
+    fs.writeFileSync(
+      path.join(configDir, 'server-config.json'),
+      JSON.stringify(serverConfig, null, 2),
+      'utf8'
+    );
+    
+    console.log('服务器配置已保存');
+    return true;
+  } catch (error) {
+    console.error('保存服务器配置失败:', error);
+    return false;
+  }
+}
+
+// 加载服务器配置
 function loadPathConfig() {
-  const configPath = path.join(__dirname, '../config/server-paths.json');
+  const configPath = path.join(__dirname, '../config/server-config.json');
   
   try {
     if (fs.existsSync(configPath)) {
       const savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      serverConfig = { ...serverConfig, ...savedConfig };
-      console.log('已加载服务器路径配置:', serverConfig);
+      
+      // 加载基本路径配置
+      if (savedConfig.basePath) serverConfig.basePath = savedConfig.basePath;
+      if (savedConfig.shFileName) serverConfig.shFileName = savedConfig.shFileName;
+      if (savedConfig.configFileName) serverConfig.configFileName = savedConfig.configFileName;
+      
+      // 加载扩展配置
+      if (savedConfig.extendedConfig) {
+        serverConfig.extendedConfig = {
+          ...serverConfig.extendedConfig, // 保留默认值
+          ...savedConfig.extendedConfig   // 覆盖保存的值
+        };
+      }
+      
+      console.log('已加载服务器配置:', serverConfig);
     }
   } catch (error) {
-    console.error('加载路径配置失败:', error);
+    console.error('加载配置失败:', error);
   }
 }
 

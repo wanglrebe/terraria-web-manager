@@ -1,0 +1,21 @@
+{
+  "basePath": "/home/wangxinyi/.steam/steam/steamapps/common/tModLoader/",
+  "shFileName": "start-tModLoaderServer.sh",
+  "configFileName": "serverconfig.txt",
+  "extendedConfig": {
+    "steamSettings": {
+      "useSteam": true,
+      "lobbyType": "private"
+    },
+    "autoSave": {
+      "enabled": true,
+      "interval": 60
+    },
+    "autoRestart": {
+      "enabled": true,
+      "time": "04:00",
+      "warningTime": 3,
+      "bypassPlayers": false
+    }
+  }
+}

@@ -1,5 +1,6 @@
 // ui-controller.js - 处理用户界面交互
 import { updateDebugInfo } from './server-controller.js';
+import { saveExtendedConfig } from './server-controller.js';
 
 // 初始化标签页切换功能
 function initTabs() {
@@ -136,6 +137,9 @@ function initializeSteamOptions() {
         lobbyOptions.style.display = 'none';
       }
       updateDebugInfo();
+      
+      // 保存Steam设置
+      saveSteamSettings();
     });
     
     // 初始检查
@@ -151,6 +155,30 @@ function initializeSteamOptions() {
     lobbyType.addEventListener('change', () => {
       console.log('大厅类型变更为:', lobbyType.value);
       updateDebugInfo();
+      
+      // 保存Steam设置
+      saveSteamSettings();
+    });
+  }
+  
+  // 保存Steam设置
+  function saveSteamSettings() {
+    if (!steamOption || !lobbyType) return;
+    
+    const useSteam = steamOption.value === 'steam';
+    const lobby = lobbyType.value;
+    
+    saveExtendedConfig({
+      steamSettings: {
+        useSteam: useSteam,
+        lobbyType: lobby
+      }
+    })
+    .then(() => {
+      console.log('Steam设置已保存');
+    })
+    .catch(error => {
+      console.error('保存Steam设置失败:', error);
     });
   }
   

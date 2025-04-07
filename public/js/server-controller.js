@@ -74,8 +74,9 @@ function setupPaths() {
     });
   }
   
-  // 加载服务器路径配置
+  // 加载服务器路径配置和扩展配置
   loadServerPaths();
+  loadExtendedConfig();
 }
 
 // 启动服务器
@@ -165,6 +166,125 @@ function saveServerPaths(basePath, shFileName, configFileName) {
     console.error('保存服务器路径配置失败:', error);
     addLogEntry('保存服务器路径失败: ' + error.message, true);
   });
+}
+
+// 保存扩展配置
+function saveExtendedConfig(config) {
+  return fetch('/api/server/extended-config', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ config })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      addLogEntry('扩展配置保存成功');
+      return data;
+    } else {
+      addLogEntry('保存扩展配置失败: ' + data.message, true);
+      throw new Error(data.message);
+    }
+  })
+  .catch(error => {
+    console.error('保存扩展配置失败:', error);
+    addLogEntry('保存扩展配置失败: ' + error.message, true);
+    throw error;
+  });
+}
+
+// 加载扩展配置
+function loadExtendedConfig() {
+  return fetch('/api/server/extended-config')
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        applyExtendedConfig(data.config);
+        console.log('已加载扩展配置');
+        return data.config;
+      } else {
+        console.error('加载扩展配置失败:', data.message);
+        return null;
+      }
+    })
+    .catch(error => {
+      console.error('加载扩展配置失败:', error);
+      return null;
+    });
+}
+
+// 应用扩展配置到UI
+function applyExtendedConfig(config) {
+  if (!config) return;
+  
+  // 应用Steam设置
+  if (config.steamSettings) {
+    const steamOption = document.getElementById('steamOption');
+    const lobbyType = document.getElementById('lobbyType');
+    
+    if (steamOption) {
+      steamOption.value = config.steamSettings.useSteam ? 'steam' : 'nosteam';
+      
+      // 触发change事件以更新UI状态
+      const event = new Event('change');
+      steamOption.dispatchEvent(event);
+    }
+    
+    if (lobbyType) {
+      lobbyType.value = config.steamSettings.lobbyType || 'private';
+    }
+  }
+  
+  // 应用自动保存设置
+  if (config.autoSave) {
+    const autoSaveEnabled = document.getElementById('autoSaveEnabled');
+    const autoSaveInterval = document.getElementById('autoSaveInterval');
+    
+    if (autoSaveEnabled) {
+      autoSaveEnabled.checked = config.autoSave.enabled;
+      
+      // 触发change事件以更新UI状态
+      const event = new Event('change');
+      autoSaveEnabled.dispatchEvent(event);
+    }
+    
+    if (autoSaveInterval) {
+      autoSaveInterval.value = config.autoSave.interval;
+    }
+  }
+  
+  // 应用自动重启设置
+  if (config.autoRestart) {
+    const autoRestartEnabled = document.getElementById('autoRestartEnabled');
+    const restartTime = document.getElementById('restartTime');
+    const restartWarningTime = document.getElementById('restartWarningTime');
+    const bypassPlayersCheck = document.getElementById('bypassPlayersCheck');
+    
+    if (autoRestartEnabled) {
+      autoRestartEnabled.checked = config.autoRestart.enabled;
+      
+      // 触发change事件以更新UI状态
+      const event = new Event('change');
+      autoRestartEnabled.dispatchEvent(event);
+    }
+    
+    if (restartTime) {
+      restartTime.value = config.autoRestart.time;
+    }
+    
+    if (restartWarningTime) {
+      restartWarningTime.value = config.autoRestart.warningTime;
+    }
+    
+    if (bypassPlayersCheck) {
+      bypassPlayersCheck.checked = config.autoRestart.bypassPlayers;
+      
+      // 触发change事件以更新UI状态
+      const event = new Event('change');
+      bypassPlayersCheck.dispatchEvent(event);
+    }
+  }
 }
 
 // 检查服务器状态
@@ -284,6 +404,25 @@ function updateDebugInfo() {
   }
 }
 
+// 修复 updateCurrentWorldName 函数缺失的问题
+// 如果 config-manager.js 中包含此函数，可以删除此定义
+function updateCurrentWorldName() {
+  const worldFile = document.getElementById('worldFile');
+  const currentWorld = document.getElementById('currentWorld');
+  
+  if (worldFile && currentWorld) {
+    const path = worldFile.value.trim();
+    if (path) {
+      // 提取文件名（不含扩展名）
+      const fileName = path.split('/').pop().replace(/\.wld$/, '');
+      currentWorld.textContent = fileName || '未指定';
+      console.log('已更新地图名称:', fileName);
+    } else {
+      currentWorld.textContent = '未指定';
+    }
+  }
+}
+
 // 导出函数和变量
 export {
   setupServerControls,
@@ -292,5 +431,7 @@ export {
   sendServerCommand,
   handleServerStatusChange,
   updateDebugInfo,
-  serverRunning
+  serverRunning,
+  saveExtendedConfig,
+  loadExtendedConfig
 };
