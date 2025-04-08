@@ -429,6 +429,27 @@ app.post('/api/github/update', async (req, res) => {
   }
 });
 
+// API路由 - 更新下次计划重启时间
+app.post('/api/scheduler/next-restart', (req, res) => {
+  const { nextRestartTime } = req.body;
+  
+  console.log(`收到下次计划重启时间更新: ${nextRestartTime}`);
+  
+  try {
+    // 调用github-status-updater的函数
+    if (nextRestartTime) {
+      githubStatusUpdater.updateNextRestartTime(nextRestartTime);
+    } else {
+      githubStatusUpdater.updateNextRestartTime(null);
+    }
+    
+    res.json({ success: true, message: '下次计划重启时间已更新' });
+  } catch (error) {
+    console.error('更新下次计划重启时间失败:', error);
+    res.status(500).json({ success: false, message: '更新下次计划重启时间失败', error: error.message });
+  }
+});
+
 // API路由 - 获取扩展配置
 app.get('/api/server/extended-config', (req, res) => {
   res.json({

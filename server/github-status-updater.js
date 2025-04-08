@@ -121,6 +121,8 @@ let currentStatus = {
   serverVersion: '未知',
   lastUpdate: new Date().toISOString(),
 };
+// 下次计划重启时间
+let nextScheduledRestart = null;
 
 /**
  * 初始化GitHub状态更新器
@@ -247,6 +249,7 @@ function getCurrentStatusData() {
     modCount: currentStatus.modCount,
     serverVersion: currentStatus.serverVersion,
     uptime: uptime,
+    nextScheduledRestart: nextScheduledRestart,
     lastUpdate: now.toISOString()
   };
 }
@@ -262,7 +265,8 @@ function hasStatusChanged(newStatus) {
     newStatus.playerCount !== currentStatus.playerCount ||
     newStatus.worldName !== currentStatus.worldName ||
     newStatus.modCount !== currentStatus.modCount ||
-    newStatus.serverVersion !== currentStatus.serverVersion
+    newStatus.serverVersion !== currentStatus.serverVersion ||
+    newStatus.nextScheduledRestart !== nextScheduledRestart
   );
 }
 
@@ -343,6 +347,14 @@ function generateIssueBody(statusData) {
     issueContent += `- **运行时间**: ${hours}小时${minutes}分钟\n`;
   }
   
+  // 添加下次计划重启信息
+  if (statusData.nextScheduledRestart) {
+    const restartTime = new Date(statusData.nextScheduledRestart);
+    issueContent += `- **下次计划重启**: ${restartTime.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}\n`;
+  } else {
+    issueContent += `- **下次计划重启**: 未计划\n`;
+  }
+  
   // 添加历史记录
   issueContent += `\n## 最近状态变更\n\n`;
   
@@ -371,6 +383,17 @@ function generateIssueBody(statusData) {
   issueContent += `\n\`\`\`\n</details>\n`;
   
   return issueContent;
+}
+
+/**
+ * 更新下次计划重启时间
+ * @param {string} nextRestart - 下次计划重启时间的ISO字符串，为null表示没有计划重启
+ */
+function updateNextRestartTime(nextRestart) {
+  console.log(`更新下次计划重启时间: ${nextRestart ? new Date(nextRestart).toLocaleString() : '未计划'}`);
+  nextScheduledRestart = nextRestart;
+  // 更新状态时重要的变化，触发GitHub更新
+  updateServerStatus('计划重启更新');
 }
 
 /**
@@ -554,6 +577,7 @@ module.exports = {
   loadConfig,
   saveConfig,                // 新增：保存配置
   forceUpdate,               // 新增：强制更新
+  updateNextRestartTime,     // 新增：更新下次计划重启时间
   getConfig: () => config,   // 新增：获取当前配置
   updateConfig: (newConfig) => {  // 新增：更新配置
     config = { ...config, ...newConfig };

@@ -143,6 +143,14 @@ function setupScheduler() {
     });
   }
 
+  // 初始化时，如果自动重启已启用，设置下次重启时间
+  if (autoRestartEnabled && autoRestartEnabled.checked) {
+    // 延迟一点执行，确保其他初始化完成
+    setTimeout(() => {
+      startAutoRestart();
+    }, 2000);
+  }
+
   // 启动自动保存
   function startAutoSave() {
     if (autoSaveTimer) {
@@ -213,6 +221,30 @@ function setupScheduler() {
       });
   }
   
+  // 更新GitHub状态中的下次计划重启时间
+  function updateGithubNextRestart(nextRestartTime) {
+    fetch('/api/scheduler/next-restart', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        nextRestartTime: nextRestartTime
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        console.log('成功更新GitHub状态的下次计划重启时间');
+      } else {
+        console.error('更新GitHub状态的下次计划重启时间失败:', data.message);
+      }
+    })
+    .catch(error => {
+      console.error('调用更新下次计划重启时间API失败:', error);
+    });
+  }
+  
   // 启动自动重启
   function startAutoRestart() {
     if (autoRestartTimer) {
@@ -239,6 +271,9 @@ function setupScheduler() {
       nextRestartTime.textContent = restartDate.toLocaleString();
     }
     
+    // 更新GitHub状态中的下次计划重启时间
+    updateGithubNextRestart(restartDate.toISOString());
+    
     console.log(`设置自动重启，计划时间: ${restartDate.toLocaleString()}, 延迟: ${delay}ms`);
     
     // 设置定时器
@@ -262,6 +297,9 @@ function setupScheduler() {
               nextRestartTime.textContent = nextRestartDate.toLocaleString();
             }
             
+            // 更新GitHub状态中的下次计划重启时间
+            updateGithubNextRestart(nextRestartDate.toISOString());
+            
             // 设置下一次重启定时器
             const nextDelay = 24 * 60 * 60 * 1000; // 24小时
             autoRestartTimer = setTimeout(autoRestartTask, nextDelay);
@@ -284,6 +322,9 @@ function setupScheduler() {
     if (nextRestartTime) {
       nextRestartTime.textContent = '未计划';
     }
+    
+    // 更新GitHub状态中的下次计划重启时间为null（表示未计划）
+    updateGithubNextRestart(null);
   }
   
   // 更新自动重启UI状态
@@ -345,6 +386,14 @@ function setupScheduler() {
         .then(data => {
           console.log('服务器启动响应:', data);
           addLogEntry('服务器重启流程已完成');
+          
+          // 设置下一次自动重启
+          if (autoRestartEnabled && autoRestartEnabled.checked) {
+            // 重新初始化自动重启计划
+            setTimeout(() => {
+              startAutoRestart();
+            }, 5000); // 等待5秒确保服务器完全启动
+          }
         })
         .catch(error => {
           console.error('启动服务器失败:', error);
