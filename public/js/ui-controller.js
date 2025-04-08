@@ -122,10 +122,13 @@ function updateVersionInfo(versionText) {
 }
 
 // 初始化Steam选项显示
+// 初始化Steam选项显示
 function initializeSteamOptions() {
   const steamOption = document.getElementById('steamOption');
   const lobbyOptions = document.getElementById('lobbyOptions');
   const lobbyType = document.getElementById('lobbyType');
+  
+  let initialLoad = true; // 标记是否是初始加载
   
   if (steamOption) {
     // Steam选项变更事件
@@ -138,16 +141,12 @@ function initializeSteamOptions() {
       }
       updateDebugInfo();
       
-      // 保存Steam设置
-      saveSteamSettings();
+      // 只有在不是初始加载时才保存
+      if (!initialLoad) {
+        // 保存Steam设置
+        saveSteamSettings();
+      }
     });
-    
-    // 初始检查
-    if (steamOption.value === 'steam') {
-      lobbyOptions.style.display = 'block';
-    } else {
-      lobbyOptions.style.display = 'none';
-    }
   }
   
   if (lobbyType) {
@@ -156,8 +155,11 @@ function initializeSteamOptions() {
       console.log('大厅类型变更为:', lobbyType.value);
       updateDebugInfo();
       
-      // 保存Steam设置
-      saveSteamSettings();
+      // 只有在不是初始加载时才保存
+      if (!initialLoad) {
+        // 保存Steam设置
+        saveSteamSettings();
+      }
     });
   }
   
@@ -167,6 +169,8 @@ function initializeSteamOptions() {
     
     const useSteam = steamOption.value === 'steam';
     const lobby = lobbyType.value;
+    
+    console.log(`保存Steam设置: useSteam=${useSteam}, lobbyType=${lobby}`);
     
     saveExtendedConfig({
       steamSettings: {
@@ -182,8 +186,14 @@ function initializeSteamOptions() {
     });
   }
   
-  // 初始化更新
+  // 初始更新UI (注意不触发change事件)
   updateDebugInfo();
+  
+  // 标记初始加载完成
+  setTimeout(() => {
+    initialLoad = false;
+    console.log('Steam选项初始化完成');
+  }, 2000); // 给2秒时间加载配置并应用到UI
 }
 
 // 显示确认对话框

@@ -195,6 +195,7 @@ function saveExtendedConfig(config) {
 }
 
 // 加载扩展配置
+// 在 loadExtendedConfig 函数中添加
 function loadExtendedConfig() {
   return fetch('/api/server/extended-config')
     .then(response => response.json())
@@ -202,6 +203,8 @@ function loadExtendedConfig() {
       if (data.success) {
         applyExtendedConfig(data.config);
         console.log('已加载扩展配置');
+        // 确保在配置应用后更新调试信息
+        updateDebugInfo();
         return data.config;
       } else {
         console.error('加载扩展配置失败:', data.message);
@@ -215,6 +218,7 @@ function loadExtendedConfig() {
 }
 
 // 应用扩展配置到UI
+// 修改 applyExtendedConfig 函数，确保在应用配置后更新调试信息
 function applyExtendedConfig(config) {
   if (!config) return;
   
@@ -222,17 +226,22 @@ function applyExtendedConfig(config) {
   if (config.steamSettings) {
     const steamOption = document.getElementById('steamOption');
     const lobbyType = document.getElementById('lobbyType');
+    const lobbyOptions = document.getElementById('lobbyOptions');
+    
+    console.log('应用Steam设置:', config.steamSettings);
     
     if (steamOption) {
       steamOption.value = config.steamSettings.useSteam ? 'steam' : 'nosteam';
       
-      // 触发change事件以更新UI状态
-      const event = new Event('change');
-      steamOption.dispatchEvent(event);
+      // 手动更新lobbyOptions的显示状态
+      if (lobbyOptions) {
+        lobbyOptions.style.display = config.steamSettings.useSteam ? 'block' : 'none';
+      }
     }
     
-    if (lobbyType) {
-      lobbyType.value = config.steamSettings.lobbyType || 'private';
+    if (lobbyType && config.steamSettings.lobbyType) {
+      lobbyType.value = config.steamSettings.lobbyType;
+      console.log(`已设置大厅类型为: ${config.steamSettings.lobbyType}`);
     }
   }
   
@@ -399,7 +408,10 @@ function updateDebugInfo() {
   
   if (currentSelectionSpan && steamOption && lobbyType) {
     const steamVal = steamOption.value;
-    const lobbyVal = lobbyType.value;
+    // 只有在Steam模式下才显示lobby类型
+    const lobbyVal = steamVal === 'steam' ? lobbyType.value : 'N/A';
+    
+    console.log(`更新显示信息: Steam=${steamVal}, Lobby=${lobbyVal}`);
     currentSelectionSpan.textContent = `Steam: ${steamVal}, Lobby: ${lobbyVal}`;
   }
 }

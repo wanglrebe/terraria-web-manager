@@ -5,7 +5,7 @@
   "extendedConfig": {
     "steamSettings": {
       "useSteam": true,
-      "lobbyType": "private"
+      "lobbyType": "friends"
     },
     "autoSave": {
       "enabled": true,
