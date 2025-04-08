@@ -1,6 +1,8 @@
 // socket-client.js - 处理Socket.IO连接
 import { handleServerStatusChange } from './server-controller.js';
 import { processServerLog } from './logs-manager.js';
+import { cleanup } from './command-processor.js';
+
 
 // 初始化Socket.IO连接
 const socket = io();
@@ -26,6 +28,9 @@ function setupSocketListeners() {
 
   socket.on('disconnect', () => {
     console.log('与Socket.IO服务器断开连接');
+
+    // 清理命令处理器资源
+    cleanup();
   });
 }
 
